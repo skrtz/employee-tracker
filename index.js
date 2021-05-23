@@ -15,6 +15,17 @@ const connection = mysql.createConnection(
     }
 );
 
+const allEmployees = () => {
+    connection.query(
+        'SELECT e.id, CONCAT(e.first_name, " ", e.last_name) AS employee, r.title, r.salary, CONCAT(m.first_name , " " , m.last_name) AS manager FROM employees e JOIN roles r ON e.role_id = r.id LEFT JOIN employees m ON e.manager_id = m.id',
+        (err, res) => {
+            if (err) throw err;
+            console.table(res);
+            runCRM();
+        }
+    );
+};
+
 const runCRM = () => {
     console.log('CRM is now online...')
     inquirer
@@ -29,6 +40,8 @@ const runCRM = () => {
                         "View All Employees by Department",
                         "View All Employees by Manager",
                         "Add Employee",
+                        "Add Role",
+                        "Add Dempartment",
                         "Remove Employee",
                         "Update Emplyee Role",
                         "Update Employee Manager",
@@ -50,6 +63,12 @@ const runCRM = () => {
                 case "Add Employee":
                     addEmployee();
                     break;
+                case "Add Role":
+                    addRole();
+                    break;
+                case "Add Department":
+                    addDept();
+                    break;
                 case "Remove Employee":
                     removeEmployee();
                     break;
@@ -69,3 +88,4 @@ connection.connect((err) => {
     if(err) throw err;
     runCRM();
 });
+
