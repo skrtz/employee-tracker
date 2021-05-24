@@ -15,6 +15,110 @@ const connection = mysql.createConnection(
     }
 );
 
+
+const updateEmRole = () => {
+    let sql = 'SELECT first_name, last_name, CONCAT(r.title) AS roles FROM employees LEFT JOIN roles r ON employees.role_id = r.id';
+    let employeeID = 0;
+    connection.query(sql, (err, results) => {
+        if (err) throw err;
+        inquirer
+            .prompt([
+                {
+                    name: 'employee',
+                    type: 'list',
+                    message: 'What employee do you want to update?',
+                    choices() {
+                        const choiceArray = [];
+                        results.forEach(({first_name, last_name}) => {
+                            choiceArray.push(first_name + ' ' + last_name)
+                        })
+                        return choiceArray;
+                    }
+                },
+                {
+                    name: 'newRole',
+                    type: 'list',
+                    message: 'What new role do you want to assign?',
+                    choices() {
+                        const choiceArray = [];
+                        results.forEach(({roles}) => {
+                            choiceArray.push(roles)
+                        })
+                        return choiceArray;
+                    }
+                }
+            ])
+            .then((answer) => {
+                let counter = 0;
+                results.forEach(({id}) => {
+                    counter++;
+                    if (counter === answer.employee.length){
+                        console.log(counter);
+                        connection.query(
+                            'UPDATE employees set ? WHERE employee = ?',
+                            [
+                                {
+                                    role_id: counter,
+                                },
+                                {   
+                                    employee: answer.employee,
+                                    
+                                },
+                            ],
+                                (err) => {
+                                    if (err) throw err;
+                                    console.log('Employee updated');
+                                    runCRM();
+                                }
+                        )
+                    }
+                })
+            })
+    });
+};
+
+const addEmployee = () => {
+    inquirer
+        .prompt([
+            {
+                name: 'first',
+                type: 'input',
+                message: 'Enter the employees first name.',
+            },
+            {
+                name: 'last',
+                type: 'input',
+                message: 'Enter the employees last name.',
+            },
+            {
+                name: 'role',
+                type: 'input',
+                message: 'Enter their role ID.',
+            },
+            {
+                name: 'manager',
+                type: 'input',
+                message: 'Enter their manager ID.',
+            }
+        ])
+        .then((answer) => {
+            connection.query(
+                'INSERT INTO employees SET ?',
+                {
+                    first_name: answer.first,
+                    last_name: answer.last,
+                    role_id: answer.role,
+                    manager_id: answer.manager
+                },
+                (err) => {
+                    if (err) throw err;
+                    console.log('New employee added to the database.');
+                    runCRM();
+                }
+            );
+        });
+};
+
 const allEmployees = () => {
     connection.query(
         'SELECT e.id, CONCAT(e.first_name, " ", e.last_name) AS employee, r.title, CONCAT(d.name) AS department, r.salary, CONCAT(m.first_name , " " , m.last_name) AS manager FROM employees e JOIN roles r ON e.role_id = r.id JOIN departments d ON r.dept_id = d.id LEFT JOIN employees m ON e.manager_id = m.id',
@@ -27,7 +131,6 @@ const allEmployees = () => {
 };
 
 const runCRM = () => {
-    console.log('CRM is now online...')
     inquirer
         .prompt(
             {
@@ -37,14 +140,8 @@ const runCRM = () => {
                 choices: 
                     [
                         "View All Employees",
-                        "View All Employees by Department",
-                        "View All Employees by Manager",
                         "Add Employee",
-                        "Add Role",
-                        "Add Dempartment",
-                        "Remove Employee",
                         "Update Emplyee Role",
-                        "Update Employee Manager",
                         "Exit"
                     ]
             }
@@ -54,29 +151,11 @@ const runCRM = () => {
                 case "View All Employees":
                     allEmployees();
                     break;
-                case "View All Employees by Department":
-                    allEmByDept();
-                    break;
-                case "View All Employees by Manager":
-                    allEmByManager();
-                    break;
                 case "Add Employee":
                     addEmployee();
                     break;
-                case "Add Role":
-                    addRole();
-                    break;
-                case "Add Department":
-                    addDept();
-                    break;
-                case "Remove Employee":
-                    removeEmployee();
-                    break;
                 case "Update Emplyee Role":
                     updateEmRole();
-                    break;
-                case "Update Employee Manager":
-                    updateEmManager();
                     break;
                 case "Exit":
                     connection.end();
@@ -86,6 +165,6 @@ const runCRM = () => {
 
 connection.connect((err) => {
     if(err) throw err;
+    console.log('CRM is now online...')  
     runCRM();
 });
-
