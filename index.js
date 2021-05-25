@@ -6,74 +6,71 @@ require('dotenv').config();
 
 const connection = mysql.createConnection(
     {
-    host: 'localhost',
-    dialect: 'mysql',
-    port: 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+        host: 'localhost',
+        dialect: 'mysql',
+        port: 3306,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
     }
 );
 
 
 const updateEmRole = () => {
-    let sql = 'SELECT first_name, last_name, CONCAT(r.title) AS roles FROM employees LEFT JOIN roles r ON employees.role_id = r.id';
+    let sql = 'SELECT * FROM employees';
     let employeeID = 0;
-    connection.query(sql, (err, results) => {
+    connection.query(sql, (err, employees) => {
         if (err) throw err;
-        inquirer
-            .prompt([
-                {
-                    name: 'employee',
-                    type: 'list',
-                    message: 'What employee do you want to update?',
-                    choices() {
-                        const choiceArray = [];
-                        results.forEach(({first_name, last_name}) => {
-                            choiceArray.push(first_name + ' ' + last_name)
-                        })
-                        return choiceArray;
+        connection.query('SELECT * FROM roles', (err, roles) => {
+            inquirer
+                .prompt([
+                    {
+                        name: 'employee',
+                        type: 'list',
+                        message: 'What employee do you want to update?',
+                        choices() {
+                            const choiceArray = [];
+                            employees.forEach(({ id, first_name, last_name }) => {
+                                choiceArray.push(id + ' ' + first_name + ' ' + last_name)
+                            })
+                            return choiceArray;
+                        }
+                    },
+                    {
+                        name: 'newRole',
+                        type: 'list',
+                        message: 'What new role do you want to assign?',
+                        choices() {
+                            const choiceArray = [];
+                            roles.forEach(({ id, title }) => {
+                                choiceArray.push(id + ' ' + title)
+                            })
+                            return choiceArray;
+                        }
                     }
-                },
-                {
-                    name: 'newRole',
-                    type: 'list',
-                    message: 'What new role do you want to assign?',
-                    choices() {
-                        const choiceArray = [];
-                        results.forEach(({roles}) => {
-                            choiceArray.push(roles)
-                        })
-                        return choiceArray;
-                    }
-                }
-            ])
-            .then((answer) => {
-                let counter = 0;
-                results.forEach(({id}) => {
-                    counter++;
-                    if (counter === answer.employee.length){
-                        console.log(counter);
-                        connection.query(
-                            'UPDATE employees set ? WHERE employee = ?',
-                            [
-                                {
-                                    role_id: counter,
-                                },
-                                {   
-                                    employee: answer.employee,
-                                    
-                                },
-                            ],
-                                (err) => {
-                                    if (err) throw err;
-                                    console.log('Employee updated');
-                                    runCRM();
-                                }
-                        )
-                    }
+                ])
+                .then((answer) => {
+                    console.log(answer);
+                    connection.query(
+                        'UPDATE employees set ? WHERE ?',
+                        [
+                            {
+                                role_id: answer.newRole.split(' ')[0],
+                            },
+                            {
+                                id: answer.employee.split(' ')[0],
+
+                            },
+                        ],
+                        (err) => {
+                            if (err) throw err;
+                            console.log('Employee updated');
+                            runCRM();
+                        }
+                    )
                 })
-            })
+        })
+
     });
 };
 
@@ -137,7 +134,7 @@ const runCRM = () => {
                 name: "action",
                 type: "list",
                 message: "What would you like to do?",
-                choices: 
+                choices:
                     [
                         "View All Employees",
                         "Add Employee",
@@ -164,7 +161,7 @@ const runCRM = () => {
 };
 
 connection.connect((err) => {
-    if(err) throw err;
-    console.log('CRM is now online...')  
+    if (err) throw err;
+    console.log('CRM is now online...')
     runCRM();
 });
